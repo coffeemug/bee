@@ -17,7 +17,7 @@ except ImportError:
     from urllib import urlencode,urlopen
 from sys import argv, exit
 
-config_path = os.path.join(os.path.expanduser('~'),'.bmndrrc')
+config_path = os.path.join(os.path.expanduser('~'),'.beerc')
 
 Config = configparser.ConfigParser()
 Config.read(config_path)
@@ -44,7 +44,7 @@ try:
 except (KeyError, configparser.NoSectionError):
     print('Error: Missing or malformed configuration file.\n')
     print('Please go to https://www.beeminder.com/api/v1/auth_token.json')
-    print('Then create a ~/.bmndrrc file like this:\n')
+    print('Then create a ~/.beerc file like this:\n')
 
     print('[account]')
     print('auth_token: <your auth_token>')
