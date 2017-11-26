@@ -2,6 +2,7 @@
 import configparser
 
 import os
+import sys
 from pprint import pprint
 from textwrap import wrap
 from datetime import time as dt_time
@@ -69,13 +70,18 @@ def print_summary():
 
     parsed = sorted(data,key=lambda data:abs(data['losedate']))
 
+    sys.stdout.write('\033[95m') # warning/red
     today = [x for x in parsed if datetime.fromtimestamp(x['losedate']) <= in_24h]
     print_goals("*Today*", today)
+    sys.stdout.write('\033[94m') # ok/blue
     tomorrow = [x for x in parsed if (datetime.fromtimestamp(x['losedate']) > in_24h and
                                       datetime.fromtimestamp(x['losedate']) <= in_24h_eod)]
     print_goals("*Tomorrow*", tomorrow)
+    sys.stdout.write('\033[92m') # safe/green
     thereafter = [x for x in parsed if datetime.fromtimestamp(x['losedate']) > in_24h_eod]
     print_goals("*Thereafter*", thereafter, showdays=True)
+    sys.stdout.write('\033[0m') # end colors
+    print()
 
 def submit_update():
     goal = argv[1]
