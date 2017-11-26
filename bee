@@ -16,9 +16,21 @@ from sys import argv, exit
 config_path = os.path.join(os.path.expanduser('~'),'.beerc')
 auth_token = None
 
-in_24h = datetime.today() + timedelta(days=1)
-in_24h_eod = datetime.combine(in_24h, dt_time(23,59,59))
+# Date management
+def infer_date(ts):
+    dt = datetime.fromtimestamp(ts)
+    if dt < datetime.combine(dt, dt_time(4,0,0)):
+        dt += timedelta(days=-1)
+    return dt.date()
 
+def todayp(dt):
+    return infer_date(dt) == datetime.today().date()
+def tomorrowp(dt):
+    return infer_date(dt) == datetime.today().date() + timedelta(days=1)
+def thereafterp(dt):
+    return infer_date(dt) > datetime.today().date() + timedelta(days=1)
+    
+# Config management
 def load_auth_token():
     global auth_token
     dict1 = {}
@@ -68,16 +80,21 @@ def print_summary():
 
     parsed = sorted(data,key=lambda data:abs(data['losedate']))
 
-    sys.stdout.write('\033[95m') # warning/red
-    today = [x for x in parsed if datetime.fromtimestamp(x['losedate']) <= in_24h]
+    today = [x for x in parsed if todayp(x['losedate'])]
+    tomorrow = [x for x in parsed if tomorrowp(x['losedate'])]
+    thereafter = [x for x in parsed if thereafterp(x['losedate'])]
+
+    colors = ['\033[95m', '\033[94m', '\033[92m']
+    
+    sys.stdout.write(colors[0]) # warning/red
     print_goals(today)
-    sys.stdout.write('\033[94m') # ok/blue
-    tomorrow = [x for x in parsed if (datetime.fromtimestamp(x['losedate']) > in_24h and
-                                      datetime.fromtimestamp(x['losedate']) <= in_24h_eod)]
+    
+    sys.stdout.write(colors[1]) # ok/blue
     print_goals(tomorrow)
-    sys.stdout.write('\033[92m') # safe/green
-    thereafter = [x for x in parsed if datetime.fromtimestamp(x['losedate']) > in_24h_eod]
+    
+    sys.stdout.write(colors[2]) # safe/green
     print_goals(thereafter, showdays=True)
+    
     sys.stdout.write('\033[0m') # end colors
     print()
 
