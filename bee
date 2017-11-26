@@ -46,8 +46,7 @@ def load_auth_token():
         print('auth_token: <your auth_token>')
         exit(1)
 
-def print_goals(heading, goals, showdays=False):
-    print(heading)
+def print_goals(goals, showdays=False):
     output = []
     for i in goals:
         daysleft = (datetime.fromtimestamp(int(i['losedate'])) - datetime.today()).days
@@ -63,7 +62,6 @@ def print_goals(heading, goals, showdays=False):
                            ('/%sd' % row[3]).ljust(5) if showdays else '')))
         except TypeError:
             pass
-    print()
 
 def print_summary():
     data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals.json?auth_token=%s' % (auth_token)).read().decode('utf-8'))
@@ -72,14 +70,14 @@ def print_summary():
 
     sys.stdout.write('\033[95m') # warning/red
     today = [x for x in parsed if datetime.fromtimestamp(x['losedate']) <= in_24h]
-    print_goals("*Today*", today)
+    print_goals(today)
     sys.stdout.write('\033[94m') # ok/blue
     tomorrow = [x for x in parsed if (datetime.fromtimestamp(x['losedate']) > in_24h and
                                       datetime.fromtimestamp(x['losedate']) <= in_24h_eod)]
-    print_goals("*Tomorrow*", tomorrow)
+    print_goals(tomorrow)
     sys.stdout.write('\033[92m') # safe/green
     thereafter = [x for x in parsed if datetime.fromtimestamp(x['losedate']) > in_24h_eod]
-    print_goals("*Thereafter*", thereafter, showdays=True)
+    print_goals(thereafter, showdays=True)
     sys.stdout.write('\033[0m') # end colors
     print()
 
