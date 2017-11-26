@@ -4,7 +4,8 @@ import configparser
 import os
 from pprint import pprint
 from textwrap import wrap
-from datetime import datetime
+from datetime import time as dt_time
+from datetime import datetime, timedelta
 from time import time
 from json import loads
 from urllib.parse import urlencode
@@ -13,6 +14,9 @@ from sys import argv, exit
 
 config_path = os.path.join(os.path.expanduser('~'),'.beerc')
 auth_token = None
+
+in_24h = datetime.today() + timedelta(days=1)
+in_24h_eod = datetime.combine(in_24h, dt_time(23,59,59))
 
 def load_auth_token():
     global auth_token
@@ -41,23 +45,37 @@ def load_auth_token():
         print('auth_token: <your auth_token>')
         exit(1)
 
+def print_goals(heading, goals, showdays=False):
+    print(heading)
+    output = []
+    for i in goals:
+        daysleft = (datetime.fromtimestamp(int(i['losedate'])) - datetime.today()).days
+        line = ['$'+str(int(i['pledge'])),i['slug'],i['baremin'],daysleft]
+        output.append(line)
+    if len(output) == 0:
+        print("Nothing to do")
+        return
+    col_width = max([len(i[1]) for i in output]) + 1
+    for row in output:
+        try:
+            print(''.join((row[0].ljust(4),row[1].ljust(col_width),row[2],
+                           ('/%sd' % row[3]).ljust(5) if showdays else '')))
+        except TypeError:
+            pass
+    print()
+
 def print_summary():
     data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals.json?auth_token=%s' % (auth_token)).read().decode('utf-8'))
 
     parsed = sorted(data,key=lambda data:abs(data['losedate']))
 
-    output = []
-    for i in parsed:
-        timeleft = datetime.fromtimestamp(int(i['losedate'])) - datetime.now()
-        days = '%sd' % timeleft.days
-        line = ['$'+str(int(i['pledge'])),i['slug'],days]
-        output.append(line)
-    col_width = max([len(i[1]) for i in output]) + 1
-    for row in output:
-        try:
-            print(''.join((row[0].ljust(4),row[1].ljust(col_width),row[2].ljust(5))))
-        except TypeError:
-            pass
+    today = [x for x in parsed if datetime.fromtimestamp(x['losedate']) <= in_24h]
+    print_goals("*Today*", today)
+    tomorrow = [x for x in parsed if (datetime.fromtimestamp(x['losedate']) > in_24h and
+                                      datetime.fromtimestamp(x['losedate']) <= in_24h_eod)]
+    print_goals("*Tomorrow*", tomorrow)
+    thereafter = [x for x in parsed if datetime.fromtimestamp(x['losedate']) > in_24h_eod]
+    print_goals("*Thereafter*", thereafter, showdays=True)
 
 def submit_update():
     goal = argv[1]
