@@ -1,8 +1,5 @@
-#!/usr/bin/python
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+#!/usr/local/bin/python3
+import configparser
 
 import os
 from pprint import pprint
@@ -10,20 +7,19 @@ from textwrap import wrap
 from datetime import datetime
 from time import time
 from json import loads
-try:
-    from urllib.parse import urlencode
-    from urllib.request import urlopen
-except ImportError:
-    from urllib import urlencode,urlopen
+from urllib.parse import urlencode
+from urllib.request import urlopen
 from sys import argv, exit
 
 config_path = os.path.join(os.path.expanduser('~'),'.beerc')
+auth_token = None
 
-Config = configparser.ConfigParser()
-Config.read(config_path)
-
-def ConfigSectionMap(section):
+def load_auth_token():
+    global auth_token
     dict1 = {}
+    section = 'account'
+    Config = configparser.ConfigParser()
+    Config.read(config_path)
     options = Config.options(section)
     for option in options:
         try:
@@ -33,31 +29,24 @@ def ConfigSectionMap(section):
         except:
             print("exception on %s!" % option)
             dict1[option] = None
-    return dict1
+
+    try:
+        auth_token = dict1['auth_token']
+    except (KeyError, configparser.NoSectionError):
+        print('Error: Missing or malformed configuration file.\n')
+        print('Please go to https://www.beeminder.com/api/v1/auth_token.json')
+        print('Then create a ~/.beerc file like this:\n')
+
+        print('[account]')
+        print('auth_token: <your auth_token>')
+        exit(1)
 
 def time_to_days(dt):
     days = dt.days
     return '%sd' % days
 
-try:
-    auth_token = ConfigSectionMap('account')['auth_token']
-except (KeyError, configparser.NoSectionError):
-    print('Error: Missing or malformed configuration file.\n')
-    print('Please go to https://www.beeminder.com/api/v1/auth_token.json')
-    print('Then create a ~/.beerc file like this:\n')
-
-    print('[account]')
-    print('auth_token: <your auth_token>')
-    exit(1)
-
-try:
-    burner = ConfigSectionMap('account')['filter']
-except (KeyError, configparser.NoSectionError):
-    burner = 'frontburner'
-
-# output for running "bmndr"
-if len(argv) == 1:
-    data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals.json?auth_token=%s&filter=%s' % (auth_token,burner)).read().decode('utf-8'))
+def print_summary():
+    data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals.json?auth_token=%s' % (auth_token)).read().decode('utf-8'))
 
     parsed = sorted(data,key=lambda data:abs(data['losedate']))
 
@@ -74,34 +63,7 @@ if len(argv) == 1:
         except TypeError:
             pass
 
-# output for running "bmndr <goal>"
-elif len(argv) == 2:
-    goal = argv[1]
-    try:
-        data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals/%s.json?auth_token=%s&datapoints=true' % (goal,auth_token)).read().decode('utf-8'))
-    except:
-        print("Oops, there seems to be no goal named '%s'!" % (goal))
-        exit(1)
-    try:
-        print(''.join(('::: Progress on %s :::\n\n%s\nBare minimum: %s\n' % (data['title'],data['headsum'],data['limsum']),'\n'.join(wrap(data['graphsum'])),'\n\n%s\n' % data['graph_url'])))
-    except KeyError:
-        print("Oops, there seems to be no goal named '%s'!" % (goal))
-        exit(1)
-    data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals/%s/datapoints.json?auth_token=%s' % (goal,auth_token)).read().decode('utf-8'))
-    for i in data[:10]:
-        print(datetime.fromtimestamp(i['timestamp']).date(), i['value'], i['comment'])
-
-# output for running "bmndr refresh <goal>"
-elif len(argv) == 3 and argv[1] == "refresh":
-    goal = argv[2]
-    post = dict()
-    if loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals/%s/refresh_graph.json?auth_token=%s' % (goal, auth_token)).read().decode('utf-8')):
-        print("Successfully refreshed %s goal" % goal)
-    else:
-        print("Failed to refresh %s goal" % goal)
-
-# output for running "bmndr <goal> <data> <comment>"
-else:
+def submit_update():
     goal = argv[1]
     
     post = dict()
@@ -118,3 +80,11 @@ else:
 
     data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals/%s/datapoints.json' % goal, params).read().decode('utf-8'))
     pprint(data)
+
+load_auth_token()
+# output for running "bmndr"
+if len(argv) == 1:
+    print_summary()
+# output for running "bmndr <goal> <data> <comment>"
+else:
+    submit_update()

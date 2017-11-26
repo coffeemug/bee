@@ -58,9 +58,7 @@ You can also tell Beeminder to refresh a goal by using the following syntax:
 Configuration
 =============
 
-Currently there are only a few options. `auth_token` is required as described above.
-
-`filter` can be set to one of `frontburner` (default), `all`, or `backburner`. Definiton of backburner [here](http://blog.beeminder.com/glossary/#b).
+Currently there is only one option -- `auth_token` is required as described above.
 
 Ideas
 =====
