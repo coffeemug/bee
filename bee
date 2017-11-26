@@ -83,12 +83,12 @@ def print_summary():
 
     col_width = max([len(i[2]) for i in output]) + 1
     for row in output:
-        try:
-            cprint(''.join((row[1].ljust(4),row[2].ljust(col_width),row[3],
-                            ('/%sd' % row[4]).ljust(5) if row[0] >= 2 else '')),
-                   colors[row[0]])
-        except TypeError:
-            pass
+        if row:
+            fmt = ''.join((row[1].ljust(4),row[2].ljust(col_width),row[3],
+                        ('/%sd' % row[4]).ljust(5) if row[0] >= 2 else ''))
+        else:
+            fmt = 'Nothing here'
+        cprint(fmt, colors[row[0]])
     sys.stdout.write('\033[0m')
     
     print()
