@@ -12,6 +12,7 @@ from json import loads
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from sys import argv, exit
+from termcolor import cprint
 
 config_path = os.path.join(os.path.expanduser('~'),'.beerc')
 auth_token = None
@@ -58,23 +59,6 @@ def load_auth_token():
         print('auth_token: <your auth_token>')
         exit(1)
 
-def print_goals(goals, showdays=False):
-    output = []
-    for i in goals:
-        daysleft = (datetime.fromtimestamp(int(i['losedate'])) - datetime.today()).days
-        line = ['$'+str(int(i['pledge'])),i['slug'],i['baremin'],daysleft]
-        output.append(line)
-    if len(output) == 0:
-        print("Nothing to do")
-        return
-    col_width = max([len(i[1]) for i in output]) + 1
-    for row in output:
-        try:
-            print(''.join((row[0].ljust(4),row[1].ljust(col_width),row[2],
-                           ('/%sd' % row[3]).ljust(5) if showdays else '')))
-        except TypeError:
-            pass
-
 def print_summary():
     data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals.json?auth_token=%s' % (auth_token)).read().decode('utf-8'))
 
@@ -84,18 +68,29 @@ def print_summary():
     tomorrow = [x for x in parsed if tomorrowp(x['losedate'])]
     thereafter = [x for x in parsed if thereafterp(x['losedate'])]
 
-    colors = ['\033[95m', '\033[94m', '\033[92m']
+    colors = ['red', 'blue', 'green']
+
+    output = []
+    combined_goals = [today, tomorrow, thereafter]
+    for x in list(range(0,3)):
+        goals = combined_goals[x]
+        for i in goals:
+            daysleft = (datetime.fromtimestamp(int(i['losedate'])) - datetime.today()).days
+            line = [x,'$'+str(int(i['pledge'])),i['slug'],i['baremin'],daysleft]
+            output.append(line)
+        if len(output) == 0:
+            output.append(None)
+
+    col_width = max([len(i[2]) for i in output]) + 1
+    for row in output:
+        try:
+            cprint(''.join((row[1].ljust(4),row[2].ljust(col_width),row[3],
+                            ('/%sd' % row[4]).ljust(5) if row[0] >= 2 else '')),
+                   colors[row[0]])
+        except TypeError:
+            pass
+    sys.stdout.write('\033[0m')
     
-    sys.stdout.write(colors[0]) # warning/red
-    print_goals(today)
-    
-    sys.stdout.write(colors[1]) # ok/blue
-    print_goals(tomorrow)
-    
-    sys.stdout.write(colors[2]) # safe/green
-    print_goals(thereafter, showdays=True)
-    
-    sys.stdout.write('\033[0m') # end colors
     print()
 
 def submit_update():
