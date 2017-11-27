@@ -39,13 +39,25 @@ def daysleft(dt):
     return (infer_date(dt) - infer_date(datetime.today())).days
     
 # Config management
+def missing_config():
+    print('Error: Missing or malformed configuration file.\n')
+    print('Please go to https://www.beeminder.com/api/v1/auth_token.json')
+    print('Then create a ~/.beerc file like this:\n')
+
+    print('[account]')
+    print('auth_token: <your auth_token>')
+    exit(1)
+
 def load_auth_token():
     global auth_token
     dict1 = {}
     section = 'account'
     Config = configparser.ConfigParser()
     Config.read(config_path)
-    options = Config.options(section)
+    try:
+        options = Config.options(section)
+    except:
+        missing_config()
     for option in options:
         try:
             dict1[option] = Config.get(section, option)
@@ -58,13 +70,7 @@ def load_auth_token():
     try:
         auth_token = dict1['auth_token']
     except (KeyError, configparser.NoSectionError):
-        print('Error: Missing or malformed configuration file.\n')
-        print('Please go to https://www.beeminder.com/api/v1/auth_token.json')
-        print('Then create a ~/.beerc file like this:\n')
-
-        print('[account]')
-        print('auth_token: <your auth_token>')
-        exit(1)
+        missing_config()
 
 def print_summary():
     data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals.json?auth_token=%s' % (auth_token)).read().decode('utf-8'))
