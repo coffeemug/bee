@@ -109,7 +109,7 @@ def print_summary():
                            when.ljust(8),
                            x['comment']])
         else:
-            fmt = 'Nothing here'
+            fmt = '.'*(col_width+4)
         cprint(fmt, colors[x['day']])
     sys.stdout.write('\033[0m')
     
