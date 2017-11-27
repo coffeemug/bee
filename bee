@@ -3,6 +3,7 @@ import configparser
 
 import os
 import sys
+import math
 from pprint import pprint
 from textwrap import wrap
 from datetime import time as dt_time
@@ -33,6 +34,9 @@ def tomorrowp(dt):
     return infer_date(dt) == infer_date(datetime.today() + timedelta(days=1))
 def thereafterp(dt):
     return infer_date(dt) > infer_date(datetime.today() + timedelta(days=1))
+
+def daysleft(dt):
+    return (infer_date(dt) - infer_date(datetime.today())).days
     
 # Config management
 def load_auth_token():
@@ -78,27 +82,31 @@ def print_summary():
     for x in list(range(0,3)):
         goals = combined_goals[x]
         for i in goals:
-            
-            daysleft = (datetime.fromtimestamp(int(i['losedate'])) - datetime.today()).days
+            baremin = float(i['baremin'])
+            if baremin > 0:
+                baremin = '+'+str(math.ceil(baremin))
+            else:
+                baremin = '-'+str(math.ceil(baremin))
             line = {
                 'day': x,
                 'pledge': '$' + str(int(i['pledge'])),
                 'name': i['slug'],
-                'baremin': i['baremin'],
-                'daysleft': daysleft,
+                'baremin': baremin,
+                'daysleft': daysleft(int(i['losedate'])),
                 'comment': i['last_datapoint']['comment']
             }
             output.append(line)
         if len(output) == 0:
-            output.append(None)
+            output.append({'day': x, 'name': ''})
 
     col_width = max([len(i['name']) for i in output]) + 1
     for x in output:
-        if x:
-            howwhen = x['baremin'] + ('/%sd' % x['daysleft'] if x['day'] >= 2 else '')
+        if 'pledge' in x:
+            when = ('(%s)' % x['daysleft'] if x['day'] >= 2 else '')
             fmt = ''.join([x['pledge'].ljust(4),
                            x['name'].ljust(col_width),
-                           howwhen.ljust(12),
+                           x['baremin'].ljust(4),
+                           when.ljust(8),
                            x['comment']])
         else:
             fmt = 'Nothing here'
