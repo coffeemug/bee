@@ -19,17 +19,20 @@ auth_token = None
 
 # Date management
 def infer_date(ts):
-    dt = datetime.fromtimestamp(ts)
+    if not (type(ts) is datetime):
+        dt = datetime.fromtimestamp(ts)
+    else:
+        dt = ts
     if dt < datetime.combine(dt, dt_time(4,0,0)):
         dt += timedelta(days=-1)
     return dt.date()
 
 def todayp(dt):
-    return infer_date(dt) == datetime.today().date()
+    return infer_date(dt) == infer_date(datetime.today())
 def tomorrowp(dt):
-    return infer_date(dt) == datetime.today().date() + timedelta(days=1)
+    return infer_date(dt) == infer_date(datetime.today() + timedelta(days=1))
 def thereafterp(dt):
-    return infer_date(dt) > datetime.today().date() + timedelta(days=1)
+    return infer_date(dt) > infer_date(datetime.today() + timedelta(days=1))
     
 # Config management
 def load_auth_token():
