@@ -78,20 +78,31 @@ def print_summary():
     for x in list(range(0,3)):
         goals = combined_goals[x]
         for i in goals:
+            
             daysleft = (datetime.fromtimestamp(int(i['losedate'])) - datetime.today()).days
-            line = [x,'$'+str(int(i['pledge'])),i['slug'],i['baremin'],daysleft]
+            line = {
+                'day': x,
+                'pledge': '$' + str(int(i['pledge'])),
+                'name': i['slug'],
+                'baremin': i['baremin'],
+                'daysleft': daysleft,
+                'comment': i['last_datapoint']['comment']
+            }
             output.append(line)
         if len(output) == 0:
             output.append(None)
 
-    col_width = max([len(i[2]) for i in output]) + 1
-    for row in output:
-        if row:
-            fmt = ''.join((row[1].ljust(4),row[2].ljust(col_width),row[3],
-                        ('/%sd' % row[4]).ljust(5) if row[0] >= 2 else ''))
+    col_width = max([len(i['name']) for i in output]) + 1
+    for x in output:
+        if x:
+            howwhen = x['baremin'] + ('/%sd' % x['daysleft'] if x['day'] >= 2 else '')
+            fmt = ''.join([x['pledge'].ljust(4),
+                           x['name'].ljust(col_width),
+                           howwhen.ljust(12),
+                           x['comment']])
         else:
             fmt = 'Nothing here'
-        cprint(fmt, colors[row[0]])
+        cprint(fmt, colors[x['day']])
     sys.stdout.write('\033[0m')
     
     print()
@@ -105,8 +116,6 @@ def submit_update():
     post['value'] = argv[2]
     if len(argv)>3:
         post['comment'] = ' '.join(argv[3:])
-    else:
-        post['comment'] = 'via bmndr at %s' % datetime.now().strftime('%X')
 
     params = urlencode(post)
     params = params.encode('utf-8')
