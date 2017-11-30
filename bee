@@ -87,10 +87,13 @@ def report():
         items.append(line)
     extended = [x for x in items if not x['daily'] or x['rate'] > 5]
     extended = sorted(extended, key=lambda x: x['daysleft'])
+    extended_first = [x for x in extended if x['daysleft'] == 0]
+    extended_rest = [x for x in extended if x['daysleft'] != 0]
     daily = [x for x in items if x not in extended]
     
+    print_extended(extended_first)
     print_daily(daily)
-    print_extended(extended)
+    print_extended(extended_rest)
     print()
 
 def print_extended(goals):
@@ -120,6 +123,7 @@ def print_daily(goals):
     output = sorted(output, key=lambda x: -x['nexpected'])
     col_width = sum([1 + i['nexpected'] for i in output]) + max(len(output) - 1, 0)
 
+    sys.stdout.write(colored('->  ', 'red'))
     for i in output:
         done = i['ndone']
         left = i['nexpected'] - i['ndone']
@@ -132,7 +136,6 @@ def print_daily(goals):
             sys.stdout.write('\u2713' * left)
         sys.stdout.write(' ')
     print()
-    cprint('-' * col_width, 'grey')
 
 def update():
     goal = argv[1]
