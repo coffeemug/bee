@@ -1,9 +1,8 @@
 #!/usr/local/bin/python3
-import configparser
-
 import os
 import sys
 import math
+import configparser
 from pprint import pprint
 from textwrap import wrap
 from datetime import time as dt_time
@@ -13,7 +12,7 @@ from json import loads
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from sys import argv, exit
-from termcolor import cprint
+from termcolor import cprint, colored
 
 config_path = os.path.join(os.path.expanduser('~'),'.beerc')
 auth_token = None
@@ -66,56 +65,76 @@ def load_auth_token():
         print('auth_token: <your auth_token>')
         exit(1)
 
-def print_summary():
+def report():
     data = loads(urlopen('https://www.beeminder.com/api/v1/users/me/goals.json?auth_token=%s' % (auth_token)).read().decode('utf-8'))
 
-    parsed = sorted(data,key=lambda data:abs(data['losedate']))
-
-    today = [x for x in parsed if todayp(x['losedate'])]
-    tomorrow = [x for x in parsed if tomorrowp(x['losedate'])]
-    thereafter = [x for x in parsed if thereafterp(x['losedate'])]
-
-    colors = ['red', 'blue', 'green']
-
-    output = []
-    combined_goals = [today, tomorrow, thereafter]
-    for x in list(range(0,3)):
-        goals = combined_goals[x]
-        for i in goals:
-            baremin = float(i['baremin'])
-            if baremin > 0:
-                baremin = '+'+str(math.ceil(baremin))
-            else:
-                baremin = '-'+str(math.ceil(baremin))
-            line = {
-                'day': x,
-                'pledge': '$' + str(int(i['pledge'])),
-                'name': i['slug'],
-                'baremin': baremin,
-                'daysleft': daysleft(int(i['losedate'])),
-                'comment': i['last_datapoint']['comment']
-            }
-            output.append(line)
-        if len(output) == 0:
-            output.append({'day': x, 'name': ''})
-
-    col_width = max([len(i['name']) for i in output]) + 1
-    for x in output:
-        if 'pledge' in x:
-            when = ('(%s)' % x['daysleft'] if x['day'] >= 2 else '')
-            fmt = ''.join([x['pledge'].ljust(4),
-                           x['name'].ljust(col_width),
-                           x['baremin'].ljust(4),
-                           when.ljust(8),
-                           x['comment']])
+    items = []
+    for i in data:
+        baremin = float(i['baremin'])
+        if baremin > 0:
+            baremin = '+'+str(math.ceil(baremin))
         else:
-            fmt = '.'*(col_width+4)
-        cprint(fmt, colors[x['day']])
-    sys.stdout.write('\033[0m')
+            baremin = '-'+str(math.ceil(baremin))
+        line = {
+            'pledge': '$' + str(int(i['pledge'])),
+            'name': i['slug'],
+            'baremin': baremin,
+            'daysleft': daysleft(int(i['losedate'])),
+            'comment': i['last_datapoint']['comment'],
+            'rate': i['rate'],
+            'daily': i['runits'] == 'd',
+        }
+        items.append(line)
+    extended = [x for x in items if not x['daily'] or x['rate'] > 5]
+    extended = sorted(extended, key=lambda x: x['daysleft'])
+    daily = [x for x in items if x not in extended]
     
+    print_daily(daily)
+    print_extended(extended)
     print()
 
-def submit_update():
+def print_extended(goals):
+    colors = ['red', 'blue', 'green']
+    col_width = max([len(i['name']) for i in goals]) + 1
+    for x in goals:
+        when = '(%s)' % x['daysleft'] if x['daysleft'] >= 2 else ''
+        fmt = ''.join([x['pledge'].ljust(4),
+                       x['name'].ljust(col_width),
+                       x['baremin'].ljust(4),
+                       when.ljust(8),
+                       x['comment']])
+        cprint(fmt, colors[min(x['daysleft'], len(colors) - 1)])
+
+def print_daily(goals):
+    output = []
+    for x in goals:
+        rate = math.ceil(x['rate'])
+        baremin = math.ceil(float(x['baremin']))
+        output.append({
+            'initial': x['name'][0],
+            'nexpected': rate,
+            'ndone': rate if x['daysleft'] > 0 else rate - baremin,
+            'daysleft': x['daysleft']
+        })
+        
+    output = sorted(output, key=lambda x: -x['nexpected'])
+    col_width = sum([1 + i['nexpected'] for i in output]) + max(len(output) - 1, 0)
+
+    for i in output:
+        done = i['ndone']
+        left = i['nexpected'] - i['ndone']
+        if left == 0:
+            sys.stdout.write(colored(i['initial'], 'green', attrs=['dark']))
+            sys.stdout.write(colored('\u2713' * done, 'green', attrs=['dark']))
+        else:
+            sys.stdout.write(colored(i['initial'], 'red'))
+            sys.stdout.write(colored('\u2713' * done, 'red'))
+            sys.stdout.write('\u2713' * left)
+        sys.stdout.write(' ')
+    print()
+    cprint('-' * col_width, 'grey')
+
+def update():
     goal = argv[1]
     
     post = dict()
@@ -134,7 +153,7 @@ def submit_update():
 load_auth_token()
 # output for running "bmndr"
 if len(argv) == 1:
-    print_summary()
+    report()
 # output for running "bmndr <goal> <data> <comment>"
 else:
-    submit_update()
+    update()
