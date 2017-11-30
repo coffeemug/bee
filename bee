@@ -97,6 +97,8 @@ def report():
     print()
 
 def print_extended(goals):
+    if len(goals) == 0:
+        return
     colors = ['red', 'blue', 'green']
     col_width = max([len(i['name']) for i in goals]) + 1
     for x in goals:
