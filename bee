@@ -123,9 +123,12 @@ def print_daily(goals):
         })
         
     output = sorted(output, key=lambda x: -x['nexpected'])
-    col_width = sum([1 + i['nexpected'] for i in output]) + max(len(output) - 1, 0)
+    daily_done_p = sum([i['nexpected'] for i in output]) == sum([i['ndone'] for i in output])
 
-    sys.stdout.write(colored('->  ', 'red'))
+    if daily_done_p:
+        sys.stdout.write(colored('->  ', 'green', attrs=['dark']))
+    else:
+        sys.stdout.write(colored('->  ', 'red'))
     for i in output:
         done = i['ndone']
         left = i['nexpected'] - i['ndone']
