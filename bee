@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from sys import argv, exit
 from termcolor import cprint, colored
+import re
 
 config_path = os.path.join(os.path.expanduser('~'),'.beerc')
 auth_token = None
@@ -148,15 +149,38 @@ def print_daily(goals):
         sys.stdout.write(' ')
     print()
 
+def read_abs_from_comment(goal):
+    data = loads(urlopen("https://www.beeminder.com/api/v1/users/me/goals/%s.json?auth_token=%s" % (goal, auth_token)).read().decode('utf-8'))
+    comment = data['last_datapoint']['comment']
+    
+    last_val = re.search('\\d+$', comment)
+    if last_val:
+        last_val = last_val.group(0)
+    else:
+        last_val = 1
+    return int(last_val)
+    
 def update():
     goal = argv[1]
+    new_val = argv[2]
+    if argv[2].startswith('@'):
+        # user reported absolute value, convert to delta
+        last_val = read_abs_from_comment(goal)
+        new_val = int(argv[2][1:])
+        if new_val > last_val:
+            new_val = new_val - last_val + 1
+        elif new_val == last_val:
+            new_val = 0
+        new_val = str(new_val)
     
     post = dict()
     post['auth_token'] = auth_token
     post['timestamp'] = round(time())
-    post['value'] = argv[2]
+    post['value'] = new_val
     if len(argv)>3:
         post['comment'] = ' '.join(argv[3:])
+    elif argv[2].startswith('@'):
+        post['comment'] = "on page %s" % argv[2][1:]
 
     params = urlencode(post)
     params = params.encode('utf-8')
