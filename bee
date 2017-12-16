@@ -180,7 +180,7 @@ def update():
     if len(argv)>3:
         post['comment'] = ' '.join(argv[3:])
     elif argv[2].startswith('@'):
-        post['comment'] = "on page %s" % argv[2][1:]
+        post['comment'] = "last at %s" % argv[2][1:]
 
     params = urlencode(post)
     params = params.encode('utf-8')
