@@ -77,11 +77,14 @@ def report():
 
     items = []
     for i in data:
-        baremin = float(i['baremin'])
-        if baremin > 0:
-            baremin = '+'+str(math.ceil(baremin))
+        if i['goal_type'] == 'fatloser':
+            baremin = float(i['baremintotal'])
         else:
-            baremin = '-'+str(math.ceil(baremin))
+            baremin = float(i['baremin'])
+            if baremin > 0:
+                baremin = '+'+str(math.ceil(baremin))
+            else:
+                baremin = '-'+str(math.ceil(baremin))
         line = {
             'pledge': '$' + str(int(i['pledge'])),
             'name': i['slug'],
@@ -90,6 +93,8 @@ def report():
             'comment': i['last_datapoint']['comment'],
             'rate': i['rate'],
             'daily': i['runits'] == 'd',
+            'type': i['goal_type'],
+            'curval': i['curval'],
         }
         items.append(line)
     extended = [x for x in items if not x['daily'] or x['rate'] > 5]
@@ -110,13 +115,27 @@ def print_extended(goals):
     col_width = max([len(i['name']) for i in goals]) + 1
     for x in goals:
         when = '(%s)' % x['daysleft'] if x['daysleft'] >= 2 else ''
+        color = colors[min(x['daysleft'], len(colors) - 1)]
+        if x['type'] == 'fatloser':
+            print_fatloser(x, col_width, when, color)
+            continue
         fmt = ''.join([x['pledge'].ljust(4),
                        x['name'].ljust(col_width),
                        x['baremin'].ljust(4),
                        when.ljust(8),
                        x['comment']])
-        cprint(fmt, colors[min(x['daysleft'], len(colors) - 1)])
+        cprint(fmt, color)
 
+def print_fatloser(x, col_width, when, color):
+    fmt = ''.join([x['pledge'].ljust(4),
+                   x['name'].ljust(col_width),
+                   ' .'.ljust(4),
+                   when.ljust(8),
+                   '%.1f -> %.1f' % (int(x['curval'] * 10) / 10.0,
+                                     int(x['baremin'] * 10) / 10.0),
+                   ])
+    cprint(fmt, color)
+        
 def print_daily(goals):
     output = []
     for x in goals:
