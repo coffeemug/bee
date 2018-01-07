@@ -103,16 +103,16 @@ def report():
     extended_rest = [x for x in extended if x['daysleft'] != 0]
     daily = [x for x in items if x not in extended]
     
-    print_extended(extended_first)
+    col_width = max([len(i['name']) for i in extended]) + 1
+    print_extended(extended_first, col_width)
     print_daily(daily)
-    print_extended(extended_rest)
+    print_extended(extended_rest, col_width)
     print()
 
-def print_extended(goals):
+def print_extended(goals, col_width):
     if len(goals) == 0:
         return
     colors = ['red', 'blue', 'green']
-    col_width = max([len(i['name']) for i in goals]) + 1
     for x in goals:
         when = '(%s)' % x['daysleft'] if x['daysleft'] >= 2 else ''
         color = colors[min(x['daysleft'], len(colors) - 1)]
