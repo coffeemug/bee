@@ -97,7 +97,7 @@ def report():
             'curval': i['curval'],
         }
         items.append(line)
-    extended = [x for x in items if not x['daily'] or x['rate'] > 5]
+    extended = [x for x in items if not x['daily']]
     extended = sorted(extended, key=lambda x: x['daysleft'])
     extended_first = [x for x in extended if x['daysleft'] == 0]
     extended_rest = [x for x in extended if x['daysleft'] != 0]
@@ -158,13 +158,24 @@ def print_daily(goals):
     for i in output:
         done = i['ndone']
         left = i['nexpected'] - i['ndone']
-        if left == 0:
-            sys.stdout.write(colored(i['initial'], 'green', attrs=['dark']))
-            sys.stdout.write(colored('\u2713' * done, 'green', attrs=['dark']))
+        total = left + done
+        if total > 5:
+            if left == 0:
+                sys.stdout.write(colored(i['initial'], 'green', attrs=['dark']))
+                sys.stdout.write(colored(':', 'green', attrs=['dark']))
+                sys.stdout.write(colored(str(total), 'green', attrs=['dark']))
+            else:
+                sys.stdout.write(colored(i['initial'], 'red'))
+                sys.stdout.write(colored(':', 'red'))
+                sys.stdout.write(colored(str(left), 'red'))
         else:
-            sys.stdout.write(colored(i['initial'], 'red'))
-            sys.stdout.write(colored('\u2713' * done, 'red'))
-            sys.stdout.write('\u2713' * left)
+            if left == 0:
+                sys.stdout.write(colored(i['initial'], 'green', attrs=['dark']))
+                sys.stdout.write(colored('\u2713' * done, 'green', attrs=['dark']))
+            else:
+                sys.stdout.write(colored(i['initial'], 'red'))
+                sys.stdout.write(colored('\u2713' * done, 'red'))
+                sys.stdout.write('\u2713' * left)
         sys.stdout.write(' ')
     print()
 
